@@ -7,6 +7,7 @@ import {
   type PaginateResult,
 } from "../../utils/paginate.js";
 import { Counter } from "./counter.model.js";
+import { type IReceipt, Receipt } from "./receipt.model.js";
 import { type Gender, type IPatient, Patient } from "./patient.model.js";
 import type {
   CreatePatientInput,
@@ -39,6 +40,35 @@ export interface PatientResponse {
   updatedBy?: string | null;
   createdAt: Date;
   updatedAt: Date;
+  receipt?: ReceiptResponse;
+}
+
+export interface ReceiptResponse {
+  id: string;
+  patientId: string;
+  receiptNumber: string;
+  items: { name: string; price: number }[];
+  totalAmount: number;
+  createdAt: Date;
+}
+
+const CODE_PAD_LENGTH = 4;
+const PRICE_DECIMALS = 2;
+
+function toReceiptResponse(
+  receipt: Pick<
+    IReceipt,
+    "_id" | "patientId" | "receiptNumber" | "items" | "totalAmount" | "createdAt"
+  >
+): ReceiptResponse {
+  return {
+    id: receipt._id.toString(),
+    patientId: receipt.patientId.toString(),
+    receiptNumber: receipt.receiptNumber,
+    items: receipt.items.map(({ name, price }) => ({ name, price })),
+    totalAmount: receipt.totalAmount,
+    createdAt: receipt.createdAt,
+  };
 }
 
 /**
@@ -47,6 +77,22 @@ export interface PatientResponse {
  * details retrieval, updates, and soft deletion.
  */
 export class PatientService {
+  /**
+   * Atomically increments a per-tenant counter and formats it as PREFIX-0001.
+   */
+  private static async nextCode(
+    tenantId: mongoose.Types.ObjectId,
+    key: string,
+    prefix: string
+  ): Promise<string> {
+    const counter = await Counter.findOneAndUpdate(
+      { tenantId, key },
+      { $inc: { seq: 1 }, $setOnInsert: { tenantId, key } },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    return `${prefix}-${String(counter.seq).padStart(CODE_PAD_LENGTH, "0")}`;
+  }
   /**
    * Registers a new patient with an atomic per-tenant sequence code (PT-0001 format).
    */
@@ -60,14 +106,11 @@ export class PatientService {
 
     const tenantId = new mongoose.Types.ObjectId(currentUser.tenantId);
 
-    // Atomic increment of the tenant's patient counter
-    const counter = await Counter.findOneAndUpdate(
-      { tenantId, key: "patientCode" },
-      { $inc: { seq: 1 }, $setOnInsert: { tenantId, key: "patientCode" } },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+    const patientCode = await PatientService.nextCode(
+      tenantId,
+      "patientCode",
+      "PT"
     );
-
-    const patientCode = `PT-${String(counter.seq).padStart(4, "0")}`;
 
     const patient = await Patient.create({
       tenantId,
@@ -82,6 +125,29 @@ export class PatientService {
       updatedBy: new mongoose.Types.ObjectId(currentUser.id),
     });
 
+    // Tests selected at registration produce a receipt for this patient
+    let receipt: IReceipt | null = null;
+    if (input.tests?.length) {
+      const receiptNumber = await PatientService.nextCode(
+        tenantId,
+        "receiptNumber",
+        "RCP"
+      );
+      const total = input.tests.reduce((sum, test) => sum + test.price, 0);
+
+      receipt = await Receipt.create({
+        tenantId,
+        patientId: patient._id,
+        receiptNumber,
+        items: input.tests.map((test) => ({
+          name: test.name.trim(),
+          price: test.price,
+        })),
+        totalAmount: Number(total.toFixed(PRICE_DECIMALS)),
+        createdBy: new mongoose.Types.ObjectId(currentUser.id),
+      });
+    }
+
     return {
       id: patient._id.toString(),
       patientCode: patient.patientCode,
@@ -95,6 +161,7 @@ export class PatientService {
       updatedBy: patient.updatedBy ? patient.updatedBy.toString() : null,
       createdAt: patient.createdAt,
       updatedAt: patient.updatedAt,
+      ...(receipt ? { receipt: toReceiptResponse(receipt) } : {}),
     };
   }
 
@@ -271,6 +338,22 @@ export class PatientService {
       createdAt: patient.createdAt,
       updatedAt: patient.updatedAt,
     };
+  }
+
+  /**
+   * Lists receipts issued for a patient, newest first, respecting tenant isolation.
+   */
+  static async listReceipts(
+    id: string,
+    currentUser: AuthUser
+  ): Promise<ReceiptResponse[]> {
+    const patient = await PatientService.getPatient(id, currentUser);
+
+    const receipts = await Receipt.find({ patientId: patient.id })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return receipts.map(toReceiptResponse);
   }
 
   /**

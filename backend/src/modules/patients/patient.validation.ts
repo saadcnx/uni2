@@ -18,6 +18,27 @@ const pastDateSchema = z
     message: "Date of birth must be a past date",
   });
 
+const MAX_TESTS_PER_RECEIPT = 50;
+const MAX_TEST_NAME_LENGTH = 100;
+const MAX_TEST_PRICE = 10_000_000;
+const PRICE_STEP = 0.01;
+
+/**
+ * Validates one test line (name and price) billed at registration.
+ */
+const testItemSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Test name is required")
+    .max(MAX_TEST_NAME_LENGTH, "Test name cannot exceed 100 characters"),
+  price: z
+    .number()
+    .min(0, "Price cannot be negative")
+    .max(MAX_TEST_PRICE, "Price is too high")
+    .multipleOf(PRICE_STEP, "Price can have at most 2 decimals"),
+});
+
 /**
  * Validation schema for registering a new Patient.
  */
@@ -39,6 +60,7 @@ export const createPatientSchema = {
       .trim()
       .max(200, "Address cannot exceed 200 characters")
       .optional(),
+    tests: z.array(testItemSchema).max(MAX_TESTS_PER_RECEIPT).optional(),
   }),
 };
 

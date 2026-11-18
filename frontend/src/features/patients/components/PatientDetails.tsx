@@ -40,9 +40,10 @@ import { useAuthStore } from "@/stores/auth.store";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/types/api";
-import { usePatient, useDeactivatePatient } from "../hooks";
+import { usePatient, usePatientReceipts, useDeactivatePatient } from "../hooks";
 import { calculateAge } from "./PatientColumns";
-import type { Gender } from "../types";
+import { formatAmount } from "../receiptFormat";
+import type { Gender, Receipt } from "../types";
 
 // PERFORMANCE.md section 5: Heavy libraries and dialogs use next/dynamic
 const ConfirmDialog = dynamic(
@@ -54,6 +55,11 @@ const ConfirmDialog = dynamic(
 const PatientFormDialog = dynamic(
   () =>
     import("./PatientFormDialog").then((mod) => mod.PatientFormDialog),
+  { ssr: false }
+);
+
+const ReceiptDialog = dynamic(
+  () => import("./ReceiptDialog").then((mod) => mod.ReceiptDialog),
   { ssr: false }
 );
 
@@ -173,6 +179,9 @@ export function PatientDetails({ patientId: propPatientId }: PatientDetailsProps
   });
 
   const deactivatePatientMutation = useDeactivatePatient();
+
+  const [viewedReceipt, setViewedReceipt] = useState<Receipt | null>(null);
+  const { data: receipts } = usePatientReceipts(patientId);
 
   const handleConfirmDeactivate = async () => {
     if (!patient) return;
@@ -459,6 +468,53 @@ export function PatientDetails({ patientId: propPatientId }: PatientDetailsProps
           </div>
         </CardContent>
       </Card>
+
+      {/* Receipts issued for this patient */}
+      {receipts && receipts.length > 0 && (
+        <Card>
+          <CardHeader className="border-b border-border/60 pb-4">
+            <CardTitle className="text-base font-semibold">Receipts</CardTitle>
+            <CardDescription>Tests billed for this patient</CardDescription>
+          </CardHeader>
+          <CardContent className="divide-y divide-border/60 pt-2">
+            {receipts.map((receipt) => (
+              <div
+                key={receipt.id}
+                className="flex items-center justify-between gap-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="font-mono text-sm font-medium">
+                    {receipt.receiptNumber}
+                  </p>
+                  <p className="text-xs text-muted-foreground tabular-nums">
+                    {formatDateTime(receipt.createdAt)} · {receipt.items.length}{" "}
+                    test(s)
+                  </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <span className="text-sm font-medium tabular-nums">
+                    {formatAmount(receipt.totalAmount)}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setViewedReceipt(receipt)}
+                    className="cursor-pointer"
+                  >
+                    View
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <ReceiptDialog
+        patient={patient}
+        receipt={viewedReceipt}
+        onClose={() => setViewedReceipt(null)}
+      />
 
       {/* Edit Dialog (PatientFormDialog) */}
       <PatientFormDialog

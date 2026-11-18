@@ -4,6 +4,7 @@ import type {
   CreatePatientInput,
   ListPatientsParams,
   Patient,
+  Receipt,
   UpdatePatientInput,
 } from "./types";
 
@@ -22,6 +23,13 @@ export async function getPatients(
  */
 export async function getPatient(id: string): Promise<Patient> {
   return apiClient.get<Patient>(`/patients/${id}`);
+}
+
+/**
+ * Fetches receipts issued for a patient, newest first.
+ */
+export async function getPatientReceipts(id: string): Promise<Receipt[]> {
+  return apiClient.get<Receipt[]>(`/patients/${id}/receipts`);
 }
 
 /**
@@ -57,4 +65,5 @@ export const patientsApi = {
   updatePatient,
   deletePatient,
   deactivatePatient: deletePatient,
+  getPatientReceipts,
 };

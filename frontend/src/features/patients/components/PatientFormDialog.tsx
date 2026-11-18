@@ -2,10 +2,10 @@
 
 import * as React from "react";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Plus, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -34,9 +34,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { computeAgeFromDob } from "./PatientColumns";
+import { ReceiptDialog } from "./ReceiptDialog";
+import { formatAmount } from "../receiptFormat";
 import { useCreatePatient, useUpdatePatient } from "../hooks";
 import {
   createPatientSchema,
+  MAX_TESTS_PER_RECEIPT,
   type CreatePatientFormValues,
 } from "../schemas";
 import type { Patient, Gender } from "../types";
@@ -92,8 +95,21 @@ function PatientFormContent({
       gender: patient?.gender || "MALE",
       dateOfBirth: dobFormatted,
       address: patient?.address || "",
+      tests: [],
     },
   });
+
+  const {
+    fields: testFields,
+    append: appendTest,
+    remove: removeTest,
+  } = useFieldArray({ control: form.control, name: "tests" });
+
+  const watchedTests = useWatch({ control: form.control, name: "tests" });
+  const testsTotal = (watchedTests ?? []).reduce(
+    (sum, test) => sum + (Number(test.price) || 0),
+    0
+  );
 
   const handleDobChange = (dobStr: string) => {
     if (!dobStr) {
@@ -188,7 +204,12 @@ function PatientFormContent({
         }
       );
     } else {
-      createPatientMutation.mutate(payload, {
+      const tests = values.tests.map((test) => ({
+        name: test.name.trim(),
+        price: Number(test.price),
+      }));
+
+      createPatientMutation.mutate({ ...payload, tests }, {
         onSuccess: (createdPatient) => {
           toast.success(
             `Patient "${createdPatient.name}" registered successfully`
@@ -411,6 +432,95 @@ function PatientFormContent({
             </div>
           </div>
 
+          {/* Tests billed at registration (create only) */}
+          {!isEditing && (
+            <div className="space-y-3">
+              <p className="text-sm font-medium leading-none">
+                Tests{" "}
+                <span className="text-xs text-muted-foreground font-normal">
+                  (Optional, a receipt is created when tests are added)
+                </span>
+              </p>
+
+              {testFields.map((row, index) => (
+                <div key={row.id} className="flex items-start gap-2">
+                  <FormField
+                    control={form.control}
+                    name={`tests.${index}.name`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input
+                            placeholder="Test name e.g. CBC"
+                            autoComplete="off"
+                            disabled={isPending}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`tests.${index}.price`}
+                    render={({ field }) => (
+                      <FormItem className="w-28">
+                        <FormControl>
+                          <Input
+                            inputMode="decimal"
+                            placeholder="Price"
+                            autoComplete="off"
+                            disabled={isPending}
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(
+                                e.target.value.replace(/[^\d.]/g, "")
+                              );
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Remove test"
+                    disabled={isPending}
+                    onClick={() => removeTest(index)}
+                    className="cursor-pointer"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    isPending || testFields.length >= MAX_TESTS_PER_RECEIPT
+                  }
+                  onClick={() => appendTest({ name: "", price: "" })}
+                  className="gap-2 cursor-pointer"
+                >
+                  <Plus className="size-3.5" />
+                  Add test
+                </Button>
+                {testFields.length > 0 && (
+                  <p className="text-sm font-medium tabular-nums">
+                    Total: {formatAmount(testsTotal)}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           <DialogFooter className="pt-2">
             <Button
               type="button"
@@ -443,18 +553,31 @@ export function PatientFormDialog({
   patient,
   onSuccess,
 }: PatientFormDialogProps) {
+  const [issuedPatient, setIssuedPatient] = useState<Patient | null>(null);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
-        {open && (
-          <PatientFormContent
-            key={patient?.id || "create"}
-            patient={patient}
-            onOpenChange={onOpenChange}
-            onSuccess={onSuccess}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          {open && (
+            <PatientFormContent
+              key={patient?.id || "create"}
+              patient={patient}
+              onOpenChange={onOpenChange}
+              onSuccess={(saved) => {
+                if (saved.receipt) setIssuedPatient(saved);
+                onSuccess?.(saved);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <ReceiptDialog
+        patient={issuedPatient}
+        receipt={issuedPatient?.receipt ?? null}
+        onClose={() => setIssuedPatient(null)}
+      />
+    </>
   );
 }

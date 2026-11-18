@@ -41,8 +41,9 @@ user = { id, name, email, role, tenantId, tenantName, isActive }. Login is rate 
 | Method and path | Access | Query or body | Result |
 |---|---|---|---|
 | GET /patients | LAB_ADMIN, DOCTOR, RECEPTIONIST | page, limit, search (name or phone), gender, sort | Paginated list: { id, patientCode, name, phone, gender, dateOfBirth, createdAt } |
-| POST /patients | LAB_ADMIN, RECEPTIONIST | { name, phone, gender, dateOfBirth, address? } | 201 patient with generated patientCode |
+| POST /patients | LAB_ADMIN, RECEPTIONIST | { name, phone, gender, dateOfBirth, address?, tests?: [{ name, price }] } | 201 patient with generated patientCode; when tests are given, also `receipt` { id, receiptNumber, items, totalAmount } |
 | GET /patients/:id | LAB_ADMIN, DOCTOR, RECEPTIONIST | none | Full patient |
+| GET /patients/:id/receipts | LAB_ADMIN, DOCTOR, RECEPTIONIST | none | Receipts of the patient, newest first |
 | PATCH /patients/:id | LAB_ADMIN, RECEPTIONIST | any editable field | Updated patient |
 | DELETE /patients/:id | LAB_ADMIN | none | 200. Soft delete (isActive false); the patient disappears from lists |
 

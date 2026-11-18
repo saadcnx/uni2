@@ -13,6 +13,7 @@ import {
   createPatient,
   deletePatient,
   getPatient,
+  getPatientReceipts,
   getPatients,
   updatePatient,
 } from "./api";
@@ -20,6 +21,7 @@ import type {
   CreatePatientInput,
   ListPatientsParams,
   Patient,
+  Receipt,
   UpdatePatientInput,
 } from "./types";
 
@@ -113,6 +115,22 @@ export function usePatient<T = Patient>(
       }
       return undefined;
     },
+    ...options,
+  });
+}
+
+/**
+ * Fetches receipts issued for a patient, newest first.
+ * The key sits under the patient detail key so patient mutations invalidate it.
+ */
+export function usePatientReceipts(
+  id: string,
+  options?: Omit<UseQueryOptions<Receipt[], ApiError>, "queryKey" | "queryFn">
+) {
+  return useQuery({
+    queryKey: [...queryKeys.patients.detail(id), "receipts"],
+    queryFn: () => getPatientReceipts(id),
+    enabled: Boolean(id),
     ...options,
   });
 }

@@ -14,6 +14,20 @@ function isValidPastDate(val: string): boolean {
   return date.getTime() < Date.now();
 }
 
+export const MAX_TESTS_PER_RECEIPT = 50;
+const MAX_TEST_NAME_LENGTH = 100;
+
+const priceRegex = /^\d+(\.\d{1,2})?$/;
+
+const testItemSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Test name is required")
+    .max(MAX_TEST_NAME_LENGTH, "Test name cannot exceed 100 characters"),
+  price: z.string().trim().regex(priceRegex, "Enter a valid price"),
+});
+
 /**
  * Patient creation Zod schema matching API_CONTRACT.md validation:
  * - name: 2 to 80 characters
@@ -48,6 +62,12 @@ export const createPatientSchema = z.object({
     .max(200, "Address cannot exceed 200 characters")
     .optional()
     .or(z.literal("")),
+  tests: z
+    .array(testItemSchema)
+    .max(
+      MAX_TESTS_PER_RECEIPT,
+      `You can add up to ${MAX_TESTS_PER_RECEIPT} tests`
+    ),
 });
 
 export type CreatePatientFormValues = z.infer<typeof createPatientSchema>;

@@ -39,6 +39,14 @@ patientRouter.get(
   PatientController.getPatient
 );
 
+// GET /api/v1/patients/:id/receipts (LAB_ADMIN, DOCTOR, RECEPTIONIST)
+patientRouter.get(
+  "/:id/receipts",
+  authorize("patient:read"),
+  validate(patientParamsSchema),
+  PatientController.listReceipts
+);
+
 // PATCH /api/v1/patients/:id (LAB_ADMIN, RECEPTIONIST)
 patientRouter.patch(
   "/:id",

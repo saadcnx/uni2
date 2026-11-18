@@ -1,5 +1,19 @@
 export type Gender = "MALE" | "FEMALE" | "OTHER";
 
+export interface ReceiptItem {
+  name: string;
+  price: number;
+}
+
+export interface Receipt {
+  id: string;
+  patientId: string;
+  receiptNumber: string;
+  items: ReceiptItem[];
+  totalAmount: number;
+  createdAt: string;
+}
+
 export interface Patient {
   id: string;
   patientCode: string;
@@ -13,6 +27,7 @@ export interface Patient {
   updatedBy?: string | null;
   createdAt: string;
   updatedAt?: string;
+  receipt?: Receipt | null;
 }
 
 export interface CreatePatientInput {
@@ -21,6 +36,7 @@ export interface CreatePatientInput {
   gender: Gender;
   dateOfBirth: string;
   address?: string;
+  tests?: ReceiptItem[];
 }
 
 export interface UpdatePatientInput {

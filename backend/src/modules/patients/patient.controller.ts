@@ -54,6 +54,15 @@ export class PatientController {
   }
 
   /**
+   * GET /api/v1/patients/:id/receipts
+   */
+  static async listReceipts(req: Request, res: Response): Promise<void> {
+    const { id } = (req.validated?.params ?? req.params) as { id: string };
+    const receipts = await PatientService.listReceipts(id, req.user!);
+    sendOk(res, receipts);
+  }
+
+  /**
    * DELETE /api/v1/patients/:id
    */
   static async deletePatient(req: Request, res: Response): Promise<void> {
