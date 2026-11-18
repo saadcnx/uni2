@@ -1,0 +1,140 @@
+{
+  "v": 2,
+  "id": "zc_mwlxzr1t_xt30",
+  "sid": "s_mwlxzr1p_s0n4",
+  "repo": "saadcnx/uni2",
+  "ts": 1794995529774,
+  "sha": "667f0ebc08b811f6083bf4ec5720a93371e76722",
+  "branch": "main",
+  "delivery": "direct",
+  "msgSubj": "feat(sync): Synchronized 14 file(s) across 1 prompt turn(s)",
+  "msgHash": "d0b5e11377fcad21",
+  "files": [
+    [
+      "backend/src/modules/patients/receipt.model.ts",
+      "a",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "backend/src/modules/patients/patient.validation.ts",
+      "m",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "backend/src/modules/patients/patient.service.ts",
+      "m",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "backend/src/modules/patients/patient.controller.ts",
+      "m",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "backend/src/modules/patients/patient.routes.ts",
+      "m",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "frontend/src/features/patients/receiptFormat.ts",
+      "a",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "frontend/src/features/patients/components/ReceiptDialog.tsx",
+      "a",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "frontend/src/features/patients/types.ts",
+      "m",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "frontend/src/features/patients/api.ts",
+      "m",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "frontend/src/features/patients/hooks.ts",
+      "m",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "frontend/src/features/patients/schemas.ts",
+      "m",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "frontend/src/features/patients/components/PatientFormDialog.tsx",
+      "m",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "frontend/src/features/patients/components/PatientDetails.tsx",
+      "m",
+      "ai",
+      1,
+      0
+    ],
+    [
+      "docs/API_CONTRACT.md",
+      "m",
+      "ai",
+      1,
+      0
+    ]
+  ],
+  "sum": {
+    "files": 14,
+    "add": 3,
+    "mod": 11,
+    "del": 0,
+    "src": {
+      "ai": 14
+    }
+  },
+  "warn": {
+    "quarantine": 0,
+    "halluc": 0,
+    "secret": 0,
+    "runtime": 0,
+    "override": false
+  },
+  "safety": {
+    "canary": "8/8",
+    "vault": "persistent"
+  },
+  "base": {
+    "gen": 0,
+    "anc": "T",
+    "race": 0
+  },
+  "verify": 1,
+  "ms": 10370,
+  "hash": "f55b54d8f1474515"
+}
